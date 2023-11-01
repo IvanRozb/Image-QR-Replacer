@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using ZXing;
 using ZXing.QrCode;
 using ZXing.Windows.Compatibility;
@@ -19,41 +20,71 @@ class Program
         string qrCodeText = args[1];
 
         string rtfContent = File.ReadAllText(rtfFilePath);
+        int startIndex = rtfContent.IndexOf("{\\pict");
+        int endIndex = rtfContent.IndexOf("}\\par");
 
-        QrCodeEncodingOptions options = new()
+        string stringToReplace = rtfContent[startIndex..endIndex];
+        string width = GetNumberAfterRtfProps("picwgoal", stringToReplace);
+        string height = GetNumberAfterRtfProps("pichgoal", stringToReplace);
+
+        if (int.TryParse(width, out int imageWidth) && int.TryParse(height, out int imageHeight))
+        {
+            var qrCodeBitmap = CreateResultBitmapFromRtf(stringToReplace, qrCodeText, imageWidth, imageHeight);
+            string qrStr = GetEmbedImageString(qrCodeBitmap, width, height) + "\n";
+            string res = rtfContent.Replace(stringToReplace, qrStr);
+
+            File.WriteAllText(rtfFilePath, res);
+        }
+        else
+        {
+            Console.WriteLine("Failed to parse image dimensions.");
+        }
+    }
+
+    static Bitmap CreateResultBitmapFromRtf(string rtfImageString, string qrCodeText, int imageWidth, int imageHeight)
+    {
+        Bitmap canvas = new(imageWidth, imageHeight);
+
+        using (Graphics g = Graphics.FromImage(canvas))
+        {
+            g.FillRectangle(Brushes.White, 0, 0, imageWidth, imageHeight);
+        }
+
+        int qrCodeSize = Math.Min(imageWidth, imageHeight);
+        int xOffset = (imageWidth - qrCodeSize) / 2;
+        int yOffset = (imageHeight - qrCodeSize) / 2;
+
+        var options = new QrCodeEncodingOptions
         {
             DisableECI = true,
             CharacterSet = "UTF-8",
-            Width = 500,
-            Height = 500
+            Width = qrCodeSize,
+            Height = qrCodeSize
         };
 
-        BarcodeWriter writer = new()
+        var writer = new BarcodeWriter
         {
             Format = BarcodeFormat.QR_CODE,
             Options = options
         };
 
-        Bitmap qrCodeBitmap = writer.Write(qrCodeText);
+        var qrCodeBitmap = writer.Write(qrCodeText);
 
-        int startIndex = rtfContent.IndexOf("{\\pict");
-        int endIndex = rtfContent.IndexOf("}\\par");
+        using (Graphics g = Graphics.FromImage(canvas))
+        {
+            g.DrawImage(qrCodeBitmap, xOffset, yOffset);
+        }
 
-        string stringToReplace = rtfContent[startIndex..endIndex];
-        string qrStr = GetEmbedImageString(qrCodeBitmap) + "\n";
-        string res = rtfContent.Replace(stringToReplace, qrStr);
-
-        File.WriteAllText(rtfFilePath, res);
+        return canvas;
     }
 
-    public static string ImageToBase64(string imagePath)
+    static string GetNumberAfterRtfProps(string prop, string str)
     {
-        using System.Drawing.Image image = System.Drawing.Image.FromFile(imagePath);
-        using MemoryStream stream = new();
-        image.Save(stream, ImageFormat.Png); // Save as PNG to preserve image quality
-        byte[] imageBytes = stream.ToArray();
-        return Convert.ToBase64String(imageBytes);
+        string pattern = prop + @"(\d+)";
+        Match match = Regex.Match(str, pattern);
+        return match.Groups[1].Value;
     }
+
 
     [Flags]
     enum EmfToWmfBitsFlags
@@ -64,7 +95,6 @@ class Program
         EmfToWmfBitsFlagsNoXORClip = 0x00000004
     }
 
-    const int MM_ISOTROPIC = 7;
     const int MM_ANISOTROPIC = 8;
 
     [DllImport("gdiplus.dll")]
@@ -81,7 +111,7 @@ class Program
     [DllImport("gdi32.dll")]
     private static extern bool DeleteEnhMetaFile(IntPtr hEmf);
 
-    public static string GetEmbedImageString(Bitmap image)
+    public static string GetEmbedImageString(Bitmap image, string width, string height)
     {
         Metafile metafile = null;
         float dpiX; float dpiY;
@@ -118,10 +148,10 @@ class Program
         int count = data.Length;
         stream.Write(data, 0, count);
 
-        string proto = @"{\pict\wmetafile8\picw" + (int)(((float)image.Width / dpiX) * 2540)
-                          + @"\pich" + (int)(((float)image.Height / dpiY) * 2540)
-                          + @"\picwgoal" + (int)(((float)image.Width / dpiX) * 1440)
-                          + @"\pichgoal" + (int)(((float)image.Height / dpiY) * 1440)
+        string proto = @"{\pict\wmetafile8\picw" + (int)(image.Width / dpiX * 10000)
+                          + @"\pich" + (int)(image.Height / dpiY * 10000)
+                          + @"\picwgoal" + width
+                          + @"\pichgoal" + height
                           + " "
               + BitConverter.ToString(stream.ToArray()).Replace("-", "")
                           + "";

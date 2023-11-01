@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Image-QR-Replacer": {
+      "commandName": "Project",
+      "commandLineArgs": "Document.rtf \"Hello, there!\""
+    }
+  }
+}

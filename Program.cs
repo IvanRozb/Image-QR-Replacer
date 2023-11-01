@@ -1,10 +1,8 @@
-﻿using System.Drawing;
-using System.Drawing.Imaging;
+﻿using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using ZXing;
 using ZXing.QrCode;
-using ZXing.Windows.Compatibility;
 
 class Program
 {
@@ -22,8 +20,8 @@ class Program
         string rtfContent = File.ReadAllText(rtfFilePath);
         int startIndex = rtfContent.IndexOf("{\\pict");
         int endIndex = rtfContent.IndexOf("}\\par");
+        string stringToReplace = rtfContent.Substring(startIndex, endIndex - startIndex);
 
-        string stringToReplace = rtfContent[startIndex..endIndex];
         string width = GetNumberAfterRtfProps("picwgoal", stringToReplace);
         string height = GetNumberAfterRtfProps("pichgoal", stringToReplace);
 
@@ -43,7 +41,7 @@ class Program
 
     static Bitmap CreateResultBitmapFromRtf(string rtfImageString, string qrCodeText, int imageWidth, int imageHeight)
     {
-        Bitmap canvas = new(imageWidth, imageHeight);
+        Bitmap canvas = new Bitmap(imageWidth, imageHeight);
 
         using (Graphics g = Graphics.FromImage(canvas))
         {
@@ -62,7 +60,7 @@ class Program
             Height = qrCodeSize
         };
 
-        var writer = new BarcodeWriter
+        var writer = new ZXing.Windows.Compatibility.BarcodeWriter
         {
             Format = BarcodeFormat.QR_CODE,
             Options = options

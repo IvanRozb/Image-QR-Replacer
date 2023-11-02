@@ -5,7 +5,7 @@ public static class RtfContentExtractor
     public static string ExtractImageFromRtfContent(string rtfContent)
     {
         var startIndex = rtfContent.IndexOf("{\\pict");
-        var endIndex = rtfContent.IndexOf("}\\par");
+        var endIndex = rtfContent.IndexOf("}\\par", startIndex);
         var count = endIndex - startIndex;
         return rtfContent.Substring(startIndex, count);
     }

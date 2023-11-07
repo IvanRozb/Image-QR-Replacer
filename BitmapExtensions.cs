@@ -39,15 +39,7 @@ public static class BitmapExtensions
 
         var count = data.Length;
         stream.Write(data, 0, count);
-
-        var proto = @"{\pict\wmetafile8\picw" + bitmap.Width
-                         + @"\pich" + bitmap.Height
-                         + @"\picwgoal" + bitmap.Width
-                         + @"\pichgoal" + bitmap.Height
-                         + " "
-                         + BitConverter.ToString(stream.ToArray()).Replace("-", "")
-                         + "\n";
-        return proto;
+        return BitConverter.ToString(stream.ToArray()).Replace("-", "");
     }
 
     [DllImport("gdiplus.dll")]

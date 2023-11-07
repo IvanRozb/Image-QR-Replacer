@@ -2,7 +2,7 @@
   "profiles": {
     "Image-QR-Replacer": {
       "commandName": "Project",
-      "commandLineArgs": "Document.rtf \"Hello, there!\""
+      "commandLineArgs": "Document.rtf \"some text\""
     }
   }
 }

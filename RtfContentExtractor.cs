@@ -6,6 +6,10 @@ public static class RtfContentExtractor
     {
         var startIndex = rtfContent.IndexOf("{\\pict");
         var endIndex = rtfContent.IndexOf("}\\par", startIndex);
+        if(endIndex == -1)
+        {
+            endIndex = rtfContent.IndexOf("\\par", startIndex);
+        }
         var count = endIndex - startIndex;
         return rtfContent.Substring(startIndex, count);
     }
@@ -13,7 +17,7 @@ public static class RtfContentExtractor
     public static int GetPropertyFromRtfContent(string propertyRtf, string contentRtf)
     {
         var pattern = propertyRtf + @"(\d+)";
-        Match match = Regex.Match(contentRtf, pattern);
+        var match = Regex.Match(contentRtf, pattern);
         return int.Parse(match.Groups[1].Value);
     }
 }

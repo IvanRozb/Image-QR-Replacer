@@ -1,4 +1,6 @@
-﻿class Program
+﻿using System.Text.RegularExpressions;
+
+class Program
 {
     static void Main(string[] args)
     {
@@ -8,14 +10,15 @@
             return;
         }
 
-        string rtfFilePath = args[0];
-        string qrCodeText = args[1];
+        var rtfFilePath = args[0];
+        var qrCodeText = args[1];
 
-        string rtfContent = FileHandler.ReadFileContent(rtfFilePath);
+        var rtfContent = FileHandler.ReadFileContent(rtfFilePath);
 
-        string imageRtf = RtfContentExtractor.ExtractImageFromRtfContent(rtfContent);
-        int width = RtfContentExtractor.GetPropertyFromRtfContent("picwgoal", imageRtf);
-        int height = RtfContentExtractor.GetPropertyFromRtfContent("pichgoal", imageRtf);
+        var imageRtf = RtfContentExtractor.ExtractImageFromRtfContent(rtfContent);
+
+        var width = RtfContentExtractor.GetPropertyFromRtfContent("picwgoal", imageRtf);
+        var height = RtfContentExtractor.GetPropertyFromRtfContent("pichgoal", imageRtf);
         float scaleX;
         float scaleY;
         try
@@ -29,13 +32,19 @@
             scaleY = 1;
         }
 
-        int fullWidth = (int)(width * scaleX);
-        int fullHeight = (int)(height * scaleY);
+        var fullWidth  = (int)(width  * scaleX);
+        var fullHeight = (int)(height * scaleY);
 
-        Bitmap qrCodeBitmap = QRCodeGenerator.GenerateQRCode(qrCodeText, fullWidth, fullHeight);
-        string qrCodeRtf = qrCodeBitmap.ToRtfString();
+        var qrCode = QRCodeGenerator.GenerateQRCode(qrCodeText, fullWidth, fullHeight);
+        var qrCodeRtfString = qrCode.ToRtfString();
 
-        string result = rtfContent.Replace(imageRtf, qrCodeRtf);
+        var pattern = "\\b(?:89504e47|ffd8ffe0|01000900)[a-zA-Z0-9\\s]+\\b"; //pattern to find binary data
+        var regex = new Regex(pattern);
+
+        var result = regex.Replace(rtfContent, qrCodeRtfString);
+        result = result.Replace("pngblip", "wmetafile8"); //pngblip is tag for setting png format of the image in rtf
+        result = result.Replace("jpegblip", "wmetafile8");//jpegblip is tag for setting png format of the image in rtf
+
         FileHandler.WriteToFile(rtfFilePath, result);
     }
 }

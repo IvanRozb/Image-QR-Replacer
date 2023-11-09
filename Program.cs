@@ -13,38 +13,50 @@ class Program
         var rtfFilePath = args[0];
         var qrCodeText = args[1];
 
+        if (string.IsNullOrEmpty(rtfFilePath) || string.IsNullOrEmpty(qrCodeText))
+        {
+            Console.WriteLine("Incorrect input");
+            Environment.Exit(0);
+        }
+
         var rtfContent = FileHandler.ReadFileContent(rtfFilePath);
 
-        var imageRtf = RtfContentExtractor.ExtractImageFromRtfContent(rtfContent);
-
-        var width = RtfContentExtractor.GetPropertyFromRtfContent("picwgoal", imageRtf);
-        var height = RtfContentExtractor.GetPropertyFromRtfContent("pichgoal", imageRtf);
-        float scaleX;
-        float scaleY;
-        try
+        var rtfImages = RtfContentExtractor.ExtractImageFromRtfContent(rtfContent);
+        if (!rtfImages.Any())
         {
-            scaleX = (float)RtfContentExtractor.GetPropertyFromRtfContent("picscalex", imageRtf) / 100;
-            scaleY = (float)RtfContentExtractor.GetPropertyFromRtfContent("picscaley", imageRtf) / 100;
-        }
-        catch (Exception)
-        {
-            scaleX = 1;
-            scaleY = 1;
+            Console.WriteLine("Images not found");
+            Environment.Exit(0);
         }
 
-        var fullWidth  = (int)(width  * scaleX);
-        var fullHeight = (int)(height * scaleY);
-
-        var qrCode = QRCodeGenerator.GenerateQRCode(qrCodeText, fullWidth, fullHeight);
-        var qrCodeRtfString = qrCode.ToRtfString();
-
-        var pattern = "\\b(?:89504e47|ffd8ffe0|01000900)[a-zA-Z0-9\\s]+\\b"; //pattern to find binary data
-        var regex = new Regex(pattern);
-
-        var result = regex.Replace(rtfContent, qrCodeRtfString);
-        result = result.Replace("pngblip", "wmetafile8"); //pngblip is tag for setting png format of the image in rtf
-        result = result.Replace("jpegblip", "wmetafile8");//jpegblip is tag for setting png format of the image in rtf
+        var result = rtfContent;
+        foreach (var image in rtfImages)
+        {
+            result = result.Replace(image.ImageContent, ProcessImage(image));
+        }
 
         FileHandler.WriteToFile(rtfFilePath, result);
+
+        string ProcessImage(RtfImage image)
+        {
+            if (!image.IsSquare())
+            {
+                return image.ImageContent;
+            }
+
+            var fullWidth = (int)(image.Width * image.ScaleX);
+            var fullHeight = (int)(image.Height * image.ScaleY);
+
+            var qrCode = QRCodeGenerator.GenerateQRCode(qrCodeText, fullWidth, fullHeight);
+            var qrCodeRtfString = qrCode.ToRtfString();
+
+            var pattern = "\\b(?:89504e47|ffd8ffe0|01000900)[a-zA-Z0-9\\s]+\\b";
+            var regex = new Regex(pattern);
+
+            var result = regex.Replace(image.ImageContent, qrCodeRtfString);
+
+            return result
+                .Replace(RtfConstants.Formats.Png, RtfConstants.Formats.WindowsMetafile)
+                .Replace(RtfConstants.Formats.Jpeg, RtfConstants.Formats.WindowsMetafile);
+        }
     }
 }

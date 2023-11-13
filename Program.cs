@@ -19,7 +19,7 @@ class Program
             Environment.Exit(0);
         }
 
-        var rtfContent = FileHandler.ReadFileContent(rtfFilePath);
+        var rtfContent = FileHandler.ReadFileContent(rtfFilePath, out var encoding);
         var rtfImages = RtfContentExtractor.ExtractImageFromRtfContent(rtfContent)
             .Where(rtfImage => rtfImage.IsSquare())
             .ToList();
@@ -35,7 +35,7 @@ class Program
             result = result.Replace(image.ImageContent, ReplaceImageWithQrCode(image));
         }
 
-        FileHandler.WriteToFile(rtfFilePath, result);
+        FileHandler.WriteToFile(rtfFilePath, result, encoding);
 
         string ReplaceImageWithQrCode(RtfImage image)
         {

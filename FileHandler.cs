@@ -1,14 +1,19 @@
-﻿public static class FileHandler
+﻿using System.Text;
+
+public static class FileHandler
 {
-    public static string ReadFileContent(string filePath)
+    public static string ReadFileContent(string filePath, out Encoding encoding)
     {
-        // Read and return the content of the specified file
-        return File.ReadAllText(filePath);
+        using var reader = new StreamReader(filePath, Encoding.Default, true);
+
+        var content = reader.ReadToEnd();
+        encoding = reader.CurrentEncoding;
+
+        return content;
     }
 
-    public static void WriteToFile(string filePath, string content)
+    public static void WriteToFile(string filePath, string content, Encoding encoding)
     {
-        // Write the provided content to the specified file
-        File.WriteAllText(filePath, content);
+        File.WriteAllText(filePath, content, encoding);
     }
 }

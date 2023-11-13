@@ -20,29 +20,25 @@ class Program
         }
 
         var rtfContent = FileHandler.ReadFileContent(rtfFilePath);
-
-        var rtfImages = RtfContentExtractor.ExtractImageFromRtfContent(rtfContent);
+        var rtfImages = RtfContentExtractor.ExtractImageFromRtfContent(rtfContent)
+            .Where(rtfImage => rtfImage.IsSquare())
+            .ToList();
         if (!rtfImages.Any())
         {
-            Console.WriteLine("Images not found");
+            Console.WriteLine("No images found to replace");
             Environment.Exit(0);
         }
 
         var result = rtfContent;
         foreach (var image in rtfImages)
         {
-            result = result.Replace(image.ImageContent, ProcessImage(image));
+            result = result.Replace(image.ImageContent, ReplaceImageWithQrCode(image));
         }
 
         FileHandler.WriteToFile(rtfFilePath, result);
 
-        string ProcessImage(RtfImage image)
+        string ReplaceImageWithQrCode(RtfImage image)
         {
-            if (!image.IsSquare())
-            {
-                return image.ImageContent;
-            }
-
             var fullWidth = (int)(image.Width * image.ScaleX);
             var fullHeight = (int)(image.Height * image.ScaleY);
 
